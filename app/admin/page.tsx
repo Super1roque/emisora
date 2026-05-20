@@ -72,7 +72,11 @@ export default function AdminPage() {
       fd.append('type',     type);
       fd.append('duration', String(duration));
       const res = await fetch('/api/upload', { method: 'POST', body: fd });
-      if (!res.ok) throw new Error((await res.json()).error);
+      if (!res.ok) {
+        let msg = `Error ${res.status}`;
+        try { msg = (await res.json()).error || msg; } catch { msg = res.statusText || msg; }
+        throw new Error(msg);
+      }
       setMsg('✅ Subido correctamente');
       setFile(null); setName(''); setArtist(''); setDuration(0);
       if (fileRef.current) fileRef.current.value = '';
