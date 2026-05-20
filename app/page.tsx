@@ -9,7 +9,7 @@ function fmtTime(s: number) {
 }
 
 function cleanName(name: string) {
-  return name.replace(/\d{4}\s\d{4}/g, '').replace(/\s+/g, ' ').trim();
+  return name.replace(/\d{4}\s\d{4}/g, '').replace(/recortado/gi, '').replace(/\s+/g, ' ').trim();
 }
 
 export default function RadioPlayer() {
@@ -20,8 +20,9 @@ export default function RadioPlayer() {
   const [duration,    setDuration]    = useState(0);
   const [loading,     setLoading]     = useState(true);
 
-  const audioRef   = useRef<HTMLAudioElement>(null);
-  const playingRef = useRef(false);
+  const audioRef      = useRef<HTMLAudioElement>(null);
+  const playingRef    = useRef(false);
+  const autoPlayRef   = useRef(false);
 
   useEffect(() => { playingRef.current = playing; }, [playing]);
 
@@ -46,7 +47,7 @@ export default function RadioPlayer() {
     const onDuration = () => setDuration(isFinite(audio.duration) ? audio.duration : 0);
     const onPlay     = () => setPlaying(true);
     const onPause    = () => setPlaying(false);
-    const onEnded    = () => setCurrentIdx(i => (i + 1) % playlist.length);
+    const onEnded    = () => { autoPlayRef.current = true; setCurrentIdx(i => (i + 1) % playlist.length); };
     audio.addEventListener('timeupdate',      onTime);
     audio.addEventListener('durationchange',  onDuration);
     audio.addEventListener('play',            onPlay);
@@ -68,7 +69,10 @@ export default function RadioPlayer() {
     audio.src = playlist[currentIdx].url;
     setCurrentTime(0);
     setDuration(0);
-    if (playingRef.current) audio.play().catch(() => {});
+    if (playingRef.current || autoPlayRef.current) {
+      autoPlayRef.current = false;
+      audio.play().catch(() => {});
+    }
   }, [currentIdx, playlist]);
 
   function togglePlay() {
