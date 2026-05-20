@@ -33,8 +33,13 @@ export default function RadioPlayer() {
   const audioRef    = useRef<HTMLAudioElement>(null);
   const playingRef  = useRef(false);
   const autoPlayRef = useRef(false);
+  const playlistRef = useRef<Track[]>([]);
+  const filteredRef = useRef<Track[]>([]);
+  const queryRef    = useRef('');
 
-  useEffect(() => { playingRef.current = playing; }, [playing]);
+  useEffect(() => { playingRef.current  = playing;  }, [playing]);
+  useEffect(() => { playlistRef.current = playlist; }, [playlist]);
+  useEffect(() => { queryRef.current    = query;    }, [query]);
 
   const load = useCallback(async () => {
     const [tRes, sRes] = await Promise.all([fetch('/api/tracks'), fetch('/api/settings')]);
@@ -56,7 +61,7 @@ export default function RadioPlayer() {
     const onDuration = () => setDuration(isFinite(audio.duration) ? audio.duration : 0);
     const onPlay     = () => setPlaying(true);
     const onPause    = () => setPlaying(false);
-    const onEnded    = () => { autoPlayRef.current = true; setCurrentIdx(i => (i + 1) % playlist.length); };
+    const onEnded    = () => { autoPlayRef.current = true; setCurrentIdx(i => nextIdx(i)); };
     audio.addEventListener('timeupdate',     onTime);
     audio.addEventListener('durationchange', onDuration);
     audio.addEventListener('play',           onPlay);
@@ -83,6 +88,28 @@ export default function RadioPlayer() {
     }
   }, [currentIdx, playlist]);
 
+  function nextIdx(cur: number): number {
+    const pl = playlistRef.current;
+    const f  = filteredRef.current;
+    if (queryRef.current && f.length) {
+      const pos  = f.findIndex(t => pl.indexOf(t) === cur);
+      const next = f[(pos + 1) % f.length];
+      return pl.indexOf(next);
+    }
+    return (cur + 1) % pl.length;
+  }
+
+  function prevIdx(cur: number): number {
+    const pl = playlistRef.current;
+    const f  = filteredRef.current;
+    if (queryRef.current && f.length) {
+      const pos  = f.findIndex(t => pl.indexOf(t) === cur);
+      const prev = f[(pos - 1 + f.length) % f.length];
+      return pl.indexOf(prev);
+    }
+    return (cur - 1 + pl.length) % pl.length;
+  }
+
   function togglePlay() {
     const audio = audioRef.current;
     if (!audio) return;
@@ -90,12 +117,12 @@ export default function RadioPlayer() {
     else audio.play().catch(() => {});
   }
 
-  function skipNext() { setCurrentIdx(i => (i + 1) % playlist.length); }
+  function skipNext() { setCurrentIdx(i => nextIdx(i)); }
 
   function skipPrev() {
     const audio = audioRef.current;
     if (audio && audio.currentTime > 3) audio.currentTime = 0;
-    else setCurrentIdx(i => (i - 1 + playlist.length) % playlist.length);
+    else setCurrentIdx(i => prevIdx(i));
   }
 
   function seek(e: React.MouseEvent<HTMLDivElement>) {
@@ -118,6 +145,7 @@ export default function RadioPlayer() {
   const filtered = q
     ? songs.filter(t => cleanName(t.name).toLowerCase().includes(q) || t.artist.toLowerCase().includes(q))
     : songs;
+  filteredRef.current = filtered;
 
   if (loading) return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
