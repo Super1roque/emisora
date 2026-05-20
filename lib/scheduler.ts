@@ -46,7 +46,7 @@ export function getNowPlaying(playlist: Track[], epochMs: number): NowPlaying | 
   if (totalDur === 0) return null;
 
   const elapsedMs  = Date.now() - epochMs;
-  const elapsedSec = ((elapsedMs % (totalDur * 1000)) / 1000 + totalDur * 1000) % (totalDur * 1000) / 1000;
+  const elapsedSec = ((elapsedMs / 1000) % totalDur + totalDur) % totalDur;
 
   let acc = 0;
   for (let i = 0; i < playlist.length; i++) {
