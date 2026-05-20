@@ -6,6 +6,7 @@ export type Track = {
   duration: number; // seconds
   url: string;
   order: number;
+  active: boolean;
 };
 
 export type RadioSettings = {
