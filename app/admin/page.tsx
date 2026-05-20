@@ -230,7 +230,7 @@ export default function AdminPage() {
               }}>
                 <span style={{ color: 'var(--muted)', fontSize: '0.75rem', minWidth: 24, textAlign: 'right' }}>{i + 1}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontWeight: 600, fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cleanName(t.name)}</p>
+                  <p style={{ fontWeight: 600, fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</p>
                   {t.artist && <p style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>{t.artist}</p>}
                 </div>
                 <span style={{ fontSize: '0.75rem', color: 'var(--muted)', flexShrink: 0 }}>{fmtDur(t.duration)}</span>
