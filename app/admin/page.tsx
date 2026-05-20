@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { buildPlaylist, getNowPlaying, type Track } from '@/lib/scheduler';
+import type { Track } from '@/lib/scheduler';
 
 const ADMIN_PASS = process.env.NEXT_PUBLIC_ADMIN_PASS || 'covers2024';
 
@@ -10,15 +10,13 @@ function fmtDur(s: number) {
 }
 
 export default function AdminPage() {
-  const [auth,     setAuth]     = useState(false);
-  const [pass,     setPass]     = useState('');
-  const [tracks,   setTracks]   = useState<Track[]>([]);
-  const [interval, setInterval_] = useState(2);
-  const [epochMs,  setEpochMs]  = useState(0);
-  const [uploading,setUploading]= useState(false);
-  const [msg,      setMsg]      = useState('');
+  const [auth,      setAuth]      = useState(false);
+  const [pass,      setPass]      = useState('');
+  const [tracks,    setTracks]    = useState<Track[]>([]);
+  const [interval,  setInterval_] = useState(2);
+  const [uploading, setUploading] = useState(false);
+  const [msg,       setMsg]       = useState('');
 
-  // Upload form state
   const [file,     setFile]     = useState<File | null>(null);
   const [name,     setName]     = useState('');
   const [artist,   setArtist]   = useState('');
@@ -30,10 +28,7 @@ export default function AdminPage() {
     if (localStorage.getItem('emisora_auth') === ADMIN_PASS) setAuth(true);
   }, []);
 
-  useEffect(() => {
-    if (!auth) return;
-    loadData();
-  }, [auth]);
+  useEffect(() => { if (auth) loadData(); }, [auth]);
 
   async function loadData() {
     const [tRes, sRes] = await Promise.all([fetch('/api/tracks'), fetch('/api/settings')]);
@@ -41,7 +36,6 @@ export default function AdminPage() {
     setTracks(Array.isArray(tData) ? tData : []);
     const cfg = await sRes.json();
     setInterval_(cfg.commercialInterval ?? 2);
-    setEpochMs(cfg.epochMs ?? 0);
   }
 
   function login() {
@@ -56,7 +50,6 @@ export default function AdminPage() {
   function handleFileChange(f: File) {
     setFile(f);
     setName(f.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' '));
-    // Read duration
     const audio = new Audio(URL.createObjectURL(f));
     audio.onloadedmetadata = () => setDuration(Math.round(audio.duration));
   }
@@ -73,9 +66,9 @@ export default function AdminPage() {
       fd.append('duration', String(duration));
       const res = await fetch('/api/upload', { method: 'POST', body: fd });
       if (!res.ok) {
-        let msg = `Error ${res.status}`;
-        try { msg = (await res.json()).error || msg; } catch { msg = res.statusText || msg; }
-        throw new Error(msg);
+        let errMsg = `Error ${res.status}`;
+        try { errMsg = (await res.json()).error || errMsg; } catch { errMsg = res.statusText || errMsg; }
+        throw new Error(errMsg);
       }
       setMsg('✅ Subido correctamente');
       setFile(null); setName(''); setArtist(''); setDuration(0);
@@ -101,39 +94,11 @@ export default function AdminPage() {
 
   async function saveSettings() {
     await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ commercialInterval: interval, epochMs }) });
+      body: JSON.stringify({ commercialInterval: interval }) });
     setMsg('✅ Configuración guardada');
   }
 
-  async function resetEpoch() {
-    const now = Date.now();
-    setEpochMs(now);
-    await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ commercialInterval: interval, epochMs: now }) });
-    setMsg('✅ Emisora reiniciada desde ahora');
-  }
-
-  async function skipNext() {
-    const songs       = tracks.filter(t => t.active && t.type === 'song');
-    const commercials = tracks.filter(t => t.active && t.type === 'commercial');
-    const playlist    = buildPlaylist(songs, commercials, interval);
-    const np          = getNowPlaying(playlist, epochMs);
-    if (!np) return;
-    const nextIdx = (np.trackIdx + 1) % playlist.length;
-    let nextStart = 0;
-    for (let i = 0; i < nextIdx; i++) nextStart += playlist[i].duration;
-    const newEpoch = Date.now() - nextStart * 1000;
-    setEpochMs(newEpoch);
-    await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ commercialInterval: interval, epochMs: newEpoch }) });
-    setMsg('⏭ Saltando a la siguiente pista');
-  }
-
-  function cleanName(name: string) {
-    return name.replace(/\d{4}\s\d{4}/g, '').replace(/\s+/g, ' ').trim();
-  }
-
-  const box: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '1.5rem', marginBottom: '1.5rem' };
+  const box:   React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '1.5rem', marginBottom: '1.5rem' };
   const label: React.CSSProperties = { fontSize: '0.78rem', color: 'var(--muted)', display: 'block', marginBottom: '0.35rem' };
   const input: React.CSSProperties = { width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8,
     padding: '0.55rem 0.75rem', color: 'var(--text)', fontSize: '0.9rem', marginBottom: '0.85rem' };
@@ -141,7 +106,7 @@ export default function AdminPage() {
   if (!auth) return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ ...box, width: 320 }}>
-        <h2 style={{ marginBottom: '1rem', fontWeight: 700 }}>🔒 Admin — Covers Radio</h2>
+        <h2 style={{ marginBottom: '1rem', fontWeight: 700 }}>🔒 Admin — Covers</h2>
         <label style={label}>Contraseña</label>
         <input style={input} type="password" value={pass} onChange={e => setPass(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && login()} autoFocus />
@@ -157,8 +122,8 @@ export default function AdminPage() {
   return (
     <div style={{ maxWidth: 680, margin: '0 auto', padding: '2rem 1.5rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '1.4rem', fontWeight: 800 }}>📻 Covers Radio — Admin</h1>
-        <a href="/" style={{ fontSize: '0.82rem', color: 'var(--muted)' }}>Ver emisora →</a>
+        <h1 style={{ fontSize: '1.4rem', fontWeight: 800 }}>🎵 Covers — Admin</h1>
+        <a href="/" style={{ fontSize: '0.82rem', color: 'var(--muted)' }}>Ver player →</a>
       </div>
 
       {msg && <div style={{ background: 'rgba(78,201,160,0.08)', border: '1px solid rgba(78,201,160,0.25)', borderRadius: 8,
@@ -172,8 +137,9 @@ export default function AdminPage() {
         <div onClick={() => fileRef.current?.click()}
           style={{ border: '2px dashed var(--border)', borderRadius: 10, padding: '1.5rem', textAlign: 'center',
             cursor: 'pointer', marginBottom: '1rem', background: file ? 'rgba(78,201,160,0.04)' : 'transparent' }}>
-          {file ? <span style={{ color: 'var(--success)' }}>🎵 {file.name} {duration > 0 ? `(${fmtDur(duration)})` : ''}</span>
-                : <span style={{ color: 'var(--muted)' }}>Haz clic o arrastra un MP3</span>}
+          {file
+            ? <span style={{ color: 'var(--success)' }}>🎵 {file.name} {duration > 0 ? `(${fmtDur(duration)})` : ''}</span>
+            : <span style={{ color: 'var(--muted)' }}>Haz clic o arrastra un MP3</span>}
         </div>
         <label style={label}>Nombre de la canción *</label>
         <input style={input} value={name} onChange={e => setName(e.target.value)} placeholder="Nombre del cover" />
@@ -199,7 +165,7 @@ export default function AdminPage() {
       {/* Settings */}
       <div style={box}>
         <h2 style={{ fontWeight: 700, marginBottom: '1.25rem', fontSize: '1rem' }}>⚙️ Configuración</h2>
-        <label style={label}>Comercial cada cuántas canciones</label>
+        <label style={label}>Insertar comercial cada cuántas canciones</label>
         <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
           {[1,2,3,4,5].map(n => (
             <button key={n} onClick={() => setInterval_(n)} className="btn"
@@ -210,17 +176,10 @@ export default function AdminPage() {
             </button>
           ))}
         </div>
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <button className="btn btn-primary" onClick={saveSettings} style={{ flex: 1 }}>Guardar</button>
-          <button className="btn btn-ghost" onClick={skipNext} style={{ flex: 1 }}>⏭ Siguiente canción</button>
-          <button className="btn btn-ghost" onClick={resetEpoch} style={{ flex: 1 }}>🔄 Reiniciar emisora</button>
-        </div>
-        {epochMs > 0 && <p style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: '0.6rem' }}>
-          Emisora activa desde: {new Date(epochMs).toLocaleString('es')}
-        </p>}
+        <button className="btn btn-primary" onClick={saveSettings}>Guardar</button>
       </div>
 
-      {/* Track list */}
+      {/* Track lists */}
       {[{ label: '🎵 Canciones', list: songs }, { label: '📢 Comerciales', list: commercials }].map(({ label: lbl, list }) => (
         <div key={lbl} style={box}>
           <h2 style={{ fontWeight: 700, marginBottom: '1rem', fontSize: '1rem' }}>{lbl} ({list.length})</h2>
