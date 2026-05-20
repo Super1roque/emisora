@@ -7,6 +7,10 @@ function fmtTime(s: number) {
   return `${m}:${sec.toString().padStart(2, '0')}`;
 }
 
+function cleanName(name: string) {
+  return name.replace(/\d{4}\s\d{4}/g, '').replace(/\s+/g, ' ').trim();
+}
+
 export default function RadioPlayer() {
   const [tracks,   setTracks]   = useState<Track[]>([]);
   const [settings, setSettings] = useState<RadioSettings | null>(null);
@@ -129,7 +133,7 @@ export default function RadioPlayer() {
             {now?.track.type === 'commercial' ? '📢 Comercial' : '🎵 Al Aire'}
           </div>
           <h1 style={{ fontSize: '1.4rem', fontWeight: 700, lineHeight: 1.3, marginBottom: '0.4rem' }}>
-            {now?.track.name ?? '—'}
+            {now ? cleanName(now.track.name) : '—'}
           </h1>
           {now?.track.artist && (
             <p style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>{now.track.artist}</p>
@@ -171,7 +175,7 @@ export default function RadioPlayer() {
             <span style={{ color: 'var(--muted)', display: 'block', marginBottom: '0.2rem', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
               A continuación
             </span>
-            <span style={{ fontWeight: 600 }}>{nextTrack.name}</span>
+            <span style={{ fontWeight: 600 }}>{cleanName(nextTrack.name)}</span>
             {nextTrack.artist && <span style={{ color: 'var(--muted)', marginLeft: '0.4rem' }}>— {nextTrack.artist}</span>}
           </div>
         )}

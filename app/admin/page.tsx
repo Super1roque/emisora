@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import type { Track } from '@/lib/scheduler';
+import { buildPlaylist, getNowPlaying, type Track } from '@/lib/scheduler';
 
 const ADMIN_PASS = process.env.NEXT_PUBLIC_ADMIN_PASS || 'covers2024';
 
@@ -109,6 +109,26 @@ export default function AdminPage() {
     setMsg('✅ Emisora reiniciada desde ahora');
   }
 
+  async function skipNext() {
+    const songs       = tracks.filter(t => t.active && t.type === 'song');
+    const commercials = tracks.filter(t => t.active && t.type === 'commercial');
+    const playlist    = buildPlaylist(songs, commercials, interval);
+    const np          = getNowPlaying(playlist, epochMs);
+    if (!np) return;
+    const nextIdx = (np.trackIdx + 1) % playlist.length;
+    let nextStart = 0;
+    for (let i = 0; i < nextIdx; i++) nextStart += playlist[i].duration;
+    const newEpoch = Date.now() - nextStart * 1000;
+    setEpochMs(newEpoch);
+    await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ commercialInterval: interval, epochMs: newEpoch }) });
+    setMsg('⏭ Saltando a la siguiente pista');
+  }
+
+  function cleanName(name: string) {
+    return name.replace(/\d{4}\s\d{4}/g, '').replace(/\s+/g, ' ').trim();
+  }
+
   const box: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '1.5rem', marginBottom: '1.5rem' };
   const label: React.CSSProperties = { fontSize: '0.78rem', color: 'var(--muted)', display: 'block', marginBottom: '0.35rem' };
   const input: React.CSSProperties = { width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8,
@@ -186,9 +206,10 @@ export default function AdminPage() {
             </button>
           ))}
         </div>
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
           <button className="btn btn-primary" onClick={saveSettings} style={{ flex: 1 }}>Guardar</button>
-          <button className="btn btn-ghost" onClick={resetEpoch} style={{ flex: 1 }}>🔄 Reiniciar emisora ahora</button>
+          <button className="btn btn-ghost" onClick={skipNext} style={{ flex: 1 }}>⏭ Siguiente canción</button>
+          <button className="btn btn-ghost" onClick={resetEpoch} style={{ flex: 1 }}>🔄 Reiniciar emisora</button>
         </div>
         {epochMs > 0 && <p style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: '0.6rem' }}>
           Emisora activa desde: {new Date(epochMs).toLocaleString('es')}
@@ -209,7 +230,7 @@ export default function AdminPage() {
               }}>
                 <span style={{ color: 'var(--muted)', fontSize: '0.75rem', minWidth: 24, textAlign: 'right' }}>{i + 1}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontWeight: 600, fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</p>
+                  <p style={{ fontWeight: 600, fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cleanName(t.name)}</p>
                   {t.artist && <p style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>{t.artist}</p>}
                 </div>
                 <span style={{ fontSize: '0.75rem', color: 'var(--muted)', flexShrink: 0 }}>{fmtDur(t.duration)}</span>
