@@ -37,7 +37,8 @@ export default function AdminPage() {
 
   async function loadData() {
     const [tRes, sRes] = await Promise.all([fetch('/api/tracks'), fetch('/api/settings')]);
-    setTracks(await tRes.json());
+    const tData = await tRes.json();
+    setTracks(Array.isArray(tData) ? tData : []);
     const cfg = await sRes.json();
     setInterval_(cfg.commercialInterval ?? 2);
     setEpochMs(cfg.epochMs ?? 0);

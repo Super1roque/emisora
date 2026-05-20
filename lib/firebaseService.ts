@@ -12,17 +12,15 @@ function initApp() {
   });
 }
 
-function getDb() {
+export function getDb() {
   initApp();
   return admin.firestore();
 }
 
-function getStorageBucket() {
+export function getStorageBucket() {
   initApp();
   if (!process.env.FIREBASE_STORAGE_BUCKET) {
-    throw new Error('FIREBASE_STORAGE_BUCKET no está configurado en .env.local');
+    throw new Error('FIREBASE_STORAGE_BUCKET no configurado');
   }
   return admin.storage().bucket();
 }
-
-export { getDb, getStorageBucket };

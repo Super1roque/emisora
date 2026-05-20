@@ -25,7 +25,8 @@ export default function RadioPlayer() {
       fetch('/api/tracks'),
       fetch('/api/settings'),
     ]);
-    const allTracks: Track[] = await tRes.json();
+    const tData = await tRes.json();
+    const allTracks: Track[] = Array.isArray(tData) ? tData : [];
     const cfg: RadioSettings = await sRes.json();
     setTracks(allTracks);
     setSettings(cfg);
