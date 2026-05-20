@@ -9,6 +9,8 @@ function fmtDur(s: number) {
   return `${m}:${sec.toString().padStart(2, '0')}`;
 }
 
+type EditState = { id: string; name: string; artist: string; type: 'song' | 'commercial' };
+
 export default function AdminPage() {
   const [auth,      setAuth]      = useState(false);
   const [pass,      setPass]      = useState('');
@@ -16,11 +18,13 @@ export default function AdminPage() {
   const [interval,  setInterval_] = useState(2);
   const [uploading, setUploading] = useState(false);
   const [msg,       setMsg]       = useState('');
+  const [editing,   setEditing]   = useState<EditState | null>(null);
+  const [saving,    setSaving]    = useState(false);
 
   const [file,     setFile]     = useState<File | null>(null);
   const [name,     setName]     = useState('');
   const [artist,   setArtist]   = useState('');
-  const [type,     setType]     = useState<'song'|'commercial'>('song');
+  const [type,     setType]     = useState<'song' | 'commercial'>('song');
   const [duration, setDuration] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -92,23 +96,42 @@ export default function AdminPage() {
     await loadData();
   }
 
+  function startEdit(t: Track) {
+    setEditing({ id: t.id, name: t.name, artist: t.artist, type: t.type });
+  }
+
+  async function saveEdit() {
+    if (!editing || !editing.name.trim()) return;
+    setSaving(true);
+    await fetch('/api/tracks', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: editing.id, name: editing.name.trim(), artist: editing.artist.trim(), type: editing.type }),
+    });
+    setSaving(false);
+    setEditing(null);
+    await loadData();
+  }
+
   async function saveSettings() {
     await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ commercialInterval: interval }) });
     setMsg('✅ Configuración guardada');
   }
 
-  const box:   React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '1.5rem', marginBottom: '1.5rem' };
-  const label: React.CSSProperties = { fontSize: '0.78rem', color: 'var(--muted)', display: 'block', marginBottom: '0.35rem' };
-  const input: React.CSSProperties = { width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8,
+  const box:    React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '1.5rem', marginBottom: '1.5rem' };
+  const label:  React.CSSProperties = { fontSize: '0.78rem', color: 'var(--muted)', display: 'block', marginBottom: '0.35rem' };
+  const inp:    React.CSSProperties = { width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8,
     padding: '0.55rem 0.75rem', color: 'var(--text)', fontSize: '0.9rem', marginBottom: '0.85rem' };
+  const inpSm:  React.CSSProperties = { background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6,
+    padding: '0.35rem 0.55rem', color: 'var(--text)', fontSize: '0.85rem', flex: 1, minWidth: 0 };
 
   if (!auth) return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ ...box, width: 320 }}>
         <h2 style={{ marginBottom: '1rem', fontWeight: 700 }}>🔒 Admin — Covers</h2>
         <label style={label}>Contraseña</label>
-        <input style={input} type="password" value={pass} onChange={e => setPass(e.target.value)}
+        <input style={inp} type="password" value={pass} onChange={e => setPass(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && login()} autoFocus />
         {msg && <p style={{ color: 'var(--error)', fontSize: '0.82rem', marginBottom: '0.5rem' }}>{msg}</p>}
         <button className="btn btn-primary" style={{ width: '100%' }} onClick={login}>Entrar</button>
@@ -142,9 +165,9 @@ export default function AdminPage() {
             : <span style={{ color: 'var(--muted)' }}>Haz clic o arrastra un MP3</span>}
         </div>
         <label style={label}>Nombre de la canción *</label>
-        <input style={input} value={name} onChange={e => setName(e.target.value)} placeholder="Nombre del cover" />
+        <input style={inp} value={name} onChange={e => setName(e.target.value)} placeholder="Nombre del cover" />
         <label style={label}>Artista original</label>
-        <input style={input} value={artist} onChange={e => setArtist(e.target.value)} placeholder="Ej: Los Beatles" />
+        <input style={inp} value={artist} onChange={e => setArtist(e.target.value)} placeholder="Ej: Los Beatles" />
         <label style={label}>Tipo</label>
         <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
           {(['song', 'commercial'] as const).map(t => (
@@ -187,20 +210,64 @@ export default function AdminPage() {
             ? <p style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>Sin pistas aún.</p>
             : list.map((t, i) => (
               <div key={t.id} style={{
-                display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.6rem 0',
                 borderBottom: i < list.length - 1 ? '1px solid var(--border)' : 'none',
-                opacity: t.active ? 1 : 0.45,
+                opacity: t.active ? 1 : 0.5,
               }}>
-                <span style={{ color: 'var(--muted)', fontSize: '0.75rem', minWidth: 24, textAlign: 'right' }}>{i + 1}</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontWeight: 600, fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</p>
-                  {t.artist && <p style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>{t.artist}</p>}
-                </div>
-                <span style={{ fontSize: '0.75rem', color: 'var(--muted)', flexShrink: 0 }}>{fmtDur(t.duration)}</span>
-                <button className="btn btn-ghost" style={{ fontSize: '0.75rem', padding: '0.3rem 0.6rem' }} onClick={() => toggleActive(t)}>
-                  {t.active ? 'Al aire' : 'Oculta'}
-                </button>
-                <button className="btn btn-danger" style={{ fontSize: '0.75rem', padding: '0.3rem 0.6rem' }} onClick={() => deleteTrack(t.id)}>🗑</button>
+                {editing?.id === t.id ? (
+                  /* ── Edit form ── */
+                  <div style={{ padding: '0.75rem 0' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                      <div style={{ flex: 2, minWidth: 0 }}>
+                        <p style={{ fontSize: '0.72rem', color: 'var(--muted)', marginBottom: '0.25rem' }}>Nombre *</p>
+                        <input style={inpSm} value={editing.name} onChange={e => setEditing({ ...editing, name: e.target.value })} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: '0.72rem', color: 'var(--muted)', marginBottom: '0.25rem' }}>Artista</p>
+                        <input style={inpSm} value={editing.artist} onChange={e => setEditing({ ...editing, artist: e.target.value })} />
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.6rem' }}>
+                      {(['song', 'commercial'] as const).map(tp => (
+                        <button key={tp} onClick={() => setEditing({ ...editing, type: tp })} className="btn"
+                          style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem',
+                            border: editing.type === tp ? '1px solid var(--accent)' : '1px solid var(--border)',
+                            background: editing.type === tp ? 'rgba(249,115,22,0.15)' : 'var(--surface2)',
+                            color: editing.type === tp ? 'var(--accent)' : 'var(--muted)' }}>
+                          {tp === 'song' ? '🎵 Canción' : '📢 Comercial'}
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button className="btn btn-primary" style={{ fontSize: '0.8rem', padding: '0.35rem 0.9rem' }}
+                        onClick={saveEdit} disabled={saving || !editing.name.trim()}>
+                        {saving ? '...' : '✅ Guardar'}
+                      </button>
+                      <button className="btn btn-ghost" style={{ fontSize: '0.8rem', padding: '0.35rem 0.9rem' }}
+                        onClick={() => setEditing(null)}>
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  /* ── Normal row ── */
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.6rem 0' }}>
+                    <span style={{ color: 'var(--muted)', fontSize: '0.75rem', minWidth: 24, textAlign: 'right' }}>{i + 1}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontWeight: 600, fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</p>
+                      {t.artist && <p style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>{t.artist}</p>}
+                    </div>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--muted)', flexShrink: 0 }}>{fmtDur(t.duration)}</span>
+                    <button className="btn btn-ghost" style={{ fontSize: '0.75rem', padding: '0.3rem 0.6rem' }} onClick={() => toggleActive(t)}>
+                      {t.active ? 'Al aire' : 'Oculta'}
+                    </button>
+                    <button className="btn btn-ghost" style={{ fontSize: '0.75rem', padding: '0.3rem 0.6rem' }} onClick={() => startEdit(t)}>
+                      ✏️
+                    </button>
+                    <button className="btn btn-danger" style={{ fontSize: '0.75rem', padding: '0.3rem 0.6rem' }} onClick={() => deleteTrack(t.id)}>
+                      🗑
+                    </button>
+                  </div>
+                )}
               </div>
             ))
           }
