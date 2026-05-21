@@ -153,7 +153,11 @@ export default function RadioPlayer() {
   const q        = query.trim().toLowerCase();
   const songs    = playlist.filter(t => t.type !== 'commercial');
   const filtered = q
-    ? songs.filter(t => cleanName(t.name).toLowerCase().includes(q) || t.artist.toLowerCase().includes(q))
+    ? songs.filter(t =>
+        cleanName(t.name).toLowerCase().includes(q) ||
+        t.name.toLowerCase().includes(q) ||
+        t.artist.toLowerCase().includes(q)
+      )
     : songs;
   filteredRef.current = filtered;
 
