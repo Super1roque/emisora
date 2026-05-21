@@ -9,7 +9,7 @@ function fmtTime(s: number) {
 }
 
 function cleanName(name: string) {
-  return name.replace(/\d{4}\s\d{4}/g, '').replace(/recortado/gi, '').replace(/\s+/g, ' ').trim();
+  return name.replace(/\d{4}\s\d{4}/g, '').replace(/\d{8}/g, '').replace(/recortado/gi, '').replace(/\s+/g, ' ').trim();
 }
 
 function shuffle<T>(arr: T[]): T[] {
