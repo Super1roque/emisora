@@ -31,6 +31,7 @@ export default function RadioPlayer() {
   const [query,       setQuery]       = useState('');
   const [shareOpen,   setShareOpen]   = useState(false);
   const [copied,      setCopied]      = useState(false);
+  const [visits,      setVisits]      = useState<number | null>(null);
 
   const audioRef    = useRef<HTMLAudioElement>(null);
   const playingRef  = useRef(false);
@@ -55,6 +56,13 @@ export default function RadioPlayer() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    fetch('/api/visits', { method: 'POST' })
+      .then(r => r.json())
+      .then(d => setVisits(d.count))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -168,6 +176,11 @@ export default function RadioPlayer() {
         <div style={{ fontSize: '1rem', fontWeight: 800, letterSpacing: '0.25em', color: 'var(--accent)', textTransform: 'uppercase' }}>
           🎵 COVERS
         </div>
+        {visits !== null && (
+          <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: '0.3rem', letterSpacing: '0.05em' }}>
+            👁 {visits.toLocaleString('es')} visitas
+          </div>
+        )}
       </div>
 
       {/* Player card */}
