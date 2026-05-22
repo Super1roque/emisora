@@ -226,7 +226,7 @@ export default function RadioPlayer() {
           )}
           {current && current.type !== 'commercial' && (
             <a
-              href={`https://wa.me/?text=${encodeURIComponent(`🎵 Escucha "${cleanName(current.name)}" en Covers: ${typeof window !== 'undefined' ? window.location.origin : ''}/?song=${current.id}`)}`}
+              href={`https://wa.me/?text=${encodeURIComponent(`🎵 Escucha "${cleanName(current.name)}" en Covers: ${typeof window !== 'undefined' ? window.location.origin : ''}/s/${current.id}`)}`}
               target="_blank" rel="noopener noreferrer"
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
